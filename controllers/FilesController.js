@@ -98,6 +98,82 @@ class FilesController {
       return res.status(500).json({ error: 'Error saving the file' });
     }
   }
+
+  static async getShow(req, res) {
+    const token = req.header('X-Token');
+    const userId = await redisClient.get(`auth_${token}`);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const fileId = req.params.id;
+    let file;
+
+    try {
+      file = await dbClient.client
+        .db()
+        .collection('files')
+        .findOne({ _id: new ObjectId(fileId), userId: new ObjectId(userId) });
+    } catch (e) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    if (!file) return res.status(404).json({ error: 'Not found' });
+
+    return res.status(200).json({
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId,
+    });
+  }
+
+  static async getIndex(req, res) {
+    const token = req.header('X-Token');
+    const userId = await redisClient.get(`auth_${token}`);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const parentId = req.query.parentId || '0';
+    const page = parseInt(req.query.page, 10) || 0;
+    const limit = 20;
+    const skip = page * limit;
+
+    const matchQuery = {
+      userId: new ObjectId(userId),
+    };
+
+    if (parentId !== '0') {
+      try {
+        matchQuery.parentId = new ObjectId(parentId);
+      } catch (err) {
+        // invalid ObjectId → return empty list
+        return res.status(200).json([]);
+      }
+    } else {
+      matchQuery.parentId = 0;
+    }
+
+    const files = await dbClient.client
+      .db()
+      .collection('files')
+      .aggregate([
+        { $match: matchQuery },
+        { $skip: skip },
+        { $limit: limit },
+      ])
+      .toArray();
+
+    const result = files.map((file) => ({
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId,
+    }));
+
+    return res.status(200).json(result);
+  }
 }
 
 export default FilesController;
