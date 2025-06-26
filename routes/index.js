@@ -15,6 +15,7 @@ router.get('/stats', AppController.getStats);
 router.post('/users', UsersController.postNew);
 router.get('/files/:id', FilesController.getShow);
 router.get('/files', FilesController.getIndex);
+router.get('/files/:id/data', FilesController.js.getFile);
 
 router.put('/files/:id/publish', FilesController.putPublish);
 router.put('/files/:id/publish', FilesController.putUnpublish);
