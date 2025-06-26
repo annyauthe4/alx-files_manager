@@ -15,3 +15,11 @@ The objective is to build a simple platform to upload and view files:
 package.json</br></br>
 .eslintrc.js</br></br>
 babel.config.js</br></br>
+
+<h3> Steps to testing API<h3>
+<ul>
+  <li>
+     Ensure Express app is running. Start it with:
+     <code>npm run start-server</code>
+  </li
+</ul>
