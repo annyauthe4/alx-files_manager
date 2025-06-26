@@ -5,6 +5,7 @@ import mime from 'mime-types';
 import { ObjectId } from 'mongodb';
 import redisClient from '../utils/redis';
 import dbClient from '../utils/db';
+import fileQueue from '../utils/queue';
 
 const FOLDER_PATH = process.env.FOLDER_PATH || '/tmp/files_manager';
 
@@ -84,6 +85,12 @@ class FilesController {
       fileData.localPath = localPath;
 
       const result = await dbClient.client.db().collection('files').insertOne(fileData);
+      if (type === 'image') {
+        await fileQueue.add({
+          userId,
+          fileId: result.insertedId.toString(),
+        });
+      }
 
       return res.status(201).json({
         id: result.insertedId,
@@ -313,6 +320,16 @@ class FilesController {
         return res.status(404).json({ error: 'Not found' });
       }
 
+      const size = req.query.size;
+      let filePath = file.localPath;
+
+      if (size && ['500', '250', '100'].includes(size)) {
+        filePath = `${file.localPath}_${size}`;
+      }
+
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'Not found' });
+      }
       // Determine MIME type
       const mimeType = mime.lookup(file.name) || 'application/octet-stream';
       res.setHeader('Content-Type', mimeType);
